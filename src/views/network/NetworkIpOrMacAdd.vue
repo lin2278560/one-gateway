@@ -1,0 +1,89 @@
+<template>
+    <div>
+        <Button type="primary" @click="showAddDrawer">
+            新增
+        </Button>
+        <Drawer title="新建IP/MAC绑定" v-model="platForm.show" width="50%">
+        <div style="margin-left:80px;color:red;">注意，如果您填写的IP地址与MAC地址不是您现在使用电脑相匹配的地址，修改成功后系统会退回登陆界面</div>
+            <Form ref="plat_form" :rules="platForm.rules" :model="platForm.form"
+                  :label-width="120">
+                <FormItem label="IP地址" prop="ipaddr" style="margin-bottom: 15px;">
+                    <Input v-model="platForm.form.ipaddr" style="width: 100%;" />
+                </FormItem>
+                <FormItem label="MAC地址" prop="mac" style="margin-bottom: 15px;">
+                    <Input v-model="platForm.form.mac" style="width: 100%;" />
+                </FormItem>
+                <FormItem label="描述" prop="desc" style="margin-bottom: 15px;">
+                    <Input v-model="platForm.form.desc" style="width: 100%;" />
+                </FormItem>
+                <FormItem>
+                    <Button type="primary" @click="addPlatForm">确认</Button>
+                    <Button style="margin-left: 8px" @click="restPlatForm">重置</Button>
+                </FormItem>
+            </Form>
+        </Drawer>
+    </div>
+</template>
+
+<script>
+    export default {
+        name: "NetworkIpOrMacAdd",
+        components: {},
+        inject: ["reload"],
+        data() {
+            return {
+                platForm: {
+                    show: false,
+                    form: {
+                        ipaddr:'',
+                        mac:'',
+                        desc:''
+                    },
+                    rules: {
+                        mac:[
+                            { required: true, message: '不能为空', trigger: 'blur' },
+                            { required: true, message: '请正确输入mac地址',trigger: 'blur', pattern:/^[A-F0-9]{2}([-:]?[A-F0-9]{2})([-:.]?[A-F0-9]{2})([-:]?[A-F0-9]{2})([-:.]?[A-F0-9]{2})([-:]?[A-F0-9]{2})$/},
+                        ],
+                        ipaddr:[
+                            { required: true, message: '不能为空', trigger: 'blur' },
+                            { required: true, pattern: /^(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])|(\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*)$/, message: '请输入ipv4或ipv6格式', trigger: 'blur' },
+                        ],
+                    }
+                }
+            }
+        },
+        computed: {},
+        mounted: function() {
+
+        },
+        methods: {
+            showAddDrawer() {
+                this.platForm.show = true;
+            },
+            addPlatForm() {
+               this.$refs['plat_form'].validate((valid) => {
+                    if (!valid)
+                        return;
+                        console.log(this.platForm.form)
+                        this.$https.fetchPost(this.$api.network.addIpMac.url,this.platForm.form).then((resp) => {
+                            if (resp.data.status == 200) {
+                                this.$Notice.success({title: 'ip/mac添加成功', desc: "正在刷新界面", duration: 5});
+                                setTimeout(() => {
+                                    this.reload();
+                                }, 250);
+                            } else
+                                this.$Notice.error({title: 'ip/mac添加失败', desc: "错误：" + resp.data.desc, duration: 5});
+                        }).catch(err => {
+                            this.$Notice.error({title: '请求失败', desc: err, duration: 5});
+                            console.log(err)
+                        })
+                });
+            },
+            restPlatForm() {
+                this.$refs['plat_form'].resetFields();
+            }
+        }
+    };
+</script>
+<style scoped lang="less">
+</style>
